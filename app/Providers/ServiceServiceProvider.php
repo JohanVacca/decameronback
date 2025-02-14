@@ -4,8 +4,7 @@ namespace App\Providers;
 
 use App\Interfaces\Services\IHotelService;
 use Illuminate\Support\ServiceProvider;
-use App\Services\hotelService;
-use App\Services\PasarelaService;
+use App\Services\HotelService;
 
 class ServiceServiceProvider extends ServiceProvider
 {
@@ -16,7 +15,7 @@ class ServiceServiceProvider extends ServiceProvider
      */
     public function register()
     {
-        $this->app->bind(IHotelService::class, hotelService::class);
+        $this->app->bind(IHotelService::class, HotelService::class);
     }
 
     /**
