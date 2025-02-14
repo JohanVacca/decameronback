@@ -60,11 +60,11 @@ class HotelService extends Controller implements IHotelService
     }
 
     /**
-     * Obtiene un hotel por su id junto con las relaciones definidas.
+     * Obtiene un hotel por su id junto con las relaciones definidas y el conteo de habitaciones por tipo y acomodación.
      *
      * @param mixed $id Identificador del hotel.
      *
-     * @return mixed Retorna el hotel encontrado.
+     * @return mixed Retorna el hotel encontrado, incluyendo el conteo de habitaciones por tipo y acomodación.
      *
      * @throws Exception Si no se encuentra el hotel o si ocurre un error.
      */
@@ -80,6 +80,19 @@ class HotelService extends Controller implements IHotelService
         } catch (Exception $e) {
             throw new Exception($e->getMessage(), Response::HTTP_INTERNAL_SERVER_ERROR, $e);
         }
+
+        $totalTipoHabs = $hotel->habitaciones->groupBy(function ($habitacion) {
+            return $habitacion->tipoHabitacionCodigo . '-' . $habitacion->tipoAcomodacionCodigo;
+        })->map(function ($group, $key) {
+            list($tipo, $acomodacion) = explode('-', $key);
+            return [
+                'tipoHabitacionCodigo'  => $tipo,
+                'tipoAcomodacionCodigo' => $acomodacion,
+                'total'                 => $group->count()
+            ];
+        })->values();
+
+        $hotel->infoHabitaciones = $totalTipoHabs;
 
         return $hotel;
     }
