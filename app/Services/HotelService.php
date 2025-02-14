@@ -3,9 +3,13 @@
 namespace App\Services;
 
 use App\Http\Controllers\Controller;
+use App\Interfaces\Repositories\IAcomodacionRepository;
 use App\Interfaces\Repositories\IHabitacionRepository;
 use App\Interfaces\Repositories\IHotelRepository;
+use App\Interfaces\Repositories\ITipoHabitacionRepository;
 use App\Interfaces\Services\IHotelService;
+use App\Models\Acomodacion;
+use App\Models\TipoHabitacion;
 use Exception;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Support\Collection;
@@ -29,15 +33,35 @@ class HotelService extends Controller implements IHotelService
     protected $habitacionRepository;
 
     /**
+     * Repositorio de habitaciones.
+     *
+     * @var IAcomodacionRepository
+     */
+    protected $acomodacionRepository;
+
+    /**
+     * Repositorio de habitaciones.
+     *
+     * @var ITipoHabitacionRepository
+     */
+    protected $tipoHabitacionRepository;
+
+    /**
      * Constructor del servicio de hoteles.
      *
      * @param IHotelRepository $hotelRepository       Repositorio de hoteles.
      * @param IHabitacionRepository $habitacionRepository Repositorio de habitaciones.
      */
-    public function __construct(IHotelRepository $hotelRepository, IHabitacionRepository $habitacionRepository)
-    {
+    public function __construct(
+        IHotelRepository $hotelRepository,
+        IHabitacionRepository $habitacionRepository,
+        ITipoHabitacionRepository $tipoHabitacionRepository,
+        IAcomodacionRepository $acomodacionRepository
+    ) {
         $this->hotelRepository = $hotelRepository;
         $this->habitacionRepository = $habitacionRepository;
+        $this->tipoHabitacionRepository = $tipoHabitacionRepository;
+        $this->acomodacionRepository = $acomodacionRepository;
     }
 
     /**
@@ -69,14 +93,23 @@ class HotelService extends Controller implements IHotelService
      */
     private function calcularInfoHabitaciones($habitaciones)
     {
+        $tiposCodigos = $habitaciones->pluck('tipoHabitacionCodigo')->unique();
+        $acomodacionCodigos = $habitaciones->pluck('tipoAcomodacionCodigo')->unique();
+
+        $tiposDescripcion = $this->tipoHabitacionRepository->obtenerDescripcionesPorCodigos($tiposCodigos->toArray());
+
+        $acomodacionesDescripcion = $this->acomodacionRepository
+        ->obtenerDescripcionesPorCodigos($acomodacionCodigos->toArray());
+
         return $habitaciones->groupBy(function ($habitacion) {
             return $habitacion->tipoHabitacionCodigo . '-' . $habitacion->tipoAcomodacionCodigo;
-        })->map(function ($group, $key) {
+        })->map(function ($group, $key) use ($tiposDescripcion, $acomodacionesDescripcion) {
             list($tipo, $acomodacion) = explode('-', $key);
+
             return [
-                'tipoHabitacionCodigo'  => $tipo,
-                'tipoAcomodacionCodigo' => $acomodacion,
-                'total'                 => $group->count()
+                'tipoHabitacionn'   => $tiposDescripcion[$tipo],
+                'tipoAcomodacion' => $acomodacionesDescripcion[$acomodacion],
+                'total'           => $group->count()
             ];
         })->values();
     }

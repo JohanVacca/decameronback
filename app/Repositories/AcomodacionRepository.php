@@ -16,4 +16,10 @@ class AcomodacionRepository extends BaseRepository implements IAcomodacionReposi
     {
         return $this->model->where('codigo', $codigo)->first();
     }
+
+    public function obtenerDescripcionesPorCodigos(array $codigos)
+    {
+        return $this->model->whereIn('codigo', $codigos)
+            ->pluck('descripcion', 'codigo');
+    }
 }

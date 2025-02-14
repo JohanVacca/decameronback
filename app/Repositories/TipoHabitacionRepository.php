@@ -16,4 +16,10 @@ class TipoHabitacionRepository extends BaseRepository implements ITipoHabitacion
     {
         return $this->model->where('codigo', $codigo)->first();
     }
+
+    public function obtenerDescripcionesPorCodigos(array $codigos)
+    {
+        return $this->model->whereIn('codigo', $codigos)
+            ->pluck('descripcion', 'codigo');
+    }
 }
