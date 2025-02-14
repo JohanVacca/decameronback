@@ -8,6 +8,7 @@ use App\Interfaces\Repositories\IHotelRepository;
 use App\Interfaces\Services\IHotelService;
 use Exception;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Symfony\Component\HttpFoundation\Response;
 
@@ -60,11 +61,32 @@ class HotelService extends Controller implements IHotelService
     }
 
     /**
+     * Calcula el conteo de habitaciones agrupadas por tipo y acomodación.
+     *
+     * @param Collection $habitaciones Colección de habitaciones.
+     *
+     * @return Collection Retorna la colección con el conteo de habitaciones.
+     */
+    private function calcularInfoHabitaciones($habitaciones)
+    {
+        return $habitaciones->groupBy(function ($habitacion) {
+            return $habitacion->tipoHabitacionCodigo . '-' . $habitacion->tipoAcomodacionCodigo;
+        })->map(function ($group, $key) {
+            list($tipo, $acomodacion) = explode('-', $key);
+            return [
+                'tipoHabitacionCodigo'  => $tipo,
+                'tipoAcomodacionCodigo' => $acomodacion,
+                'total'                 => $group->count()
+            ];
+        })->values();
+    }
+
+    /**
      * Obtiene un hotel por su id junto con las relaciones definidas y el conteo de habitaciones por tipo y acomodación.
      *
      * @param mixed $id Identificador del hotel.
      *
-     * @return mixed Retorna el hotel encontrado, incluyendo el conteo de habitaciones por tipo y acomodación.
+     * @return mixed Retorna el hotel encontrado, incluyendo el atributo `infoHabitaciones`.
      *
      * @throws Exception Si no se encuentra el hotel o si ocurre un error.
      */
@@ -81,26 +103,17 @@ class HotelService extends Controller implements IHotelService
             throw new Exception($e->getMessage(), Response::HTTP_INTERNAL_SERVER_ERROR, $e);
         }
 
-        $totalTipoHabs = $hotel->habitaciones->groupBy(function ($habitacion) {
-            return $habitacion->tipoHabitacionCodigo . '-' . $habitacion->tipoAcomodacionCodigo;
-        })->map(function ($group, $key) {
-            list($tipo, $acomodacion) = explode('-', $key);
-            return [
-                'tipoHabitacionCodigo'  => $tipo,
-                'tipoAcomodacionCodigo' => $acomodacion,
-                'total'                 => $group->count()
-            ];
-        })->values();
-
-        $hotel->infoHabitaciones = $totalTipoHabs;
+        $hotel->infoHabitaciones = $this->calcularInfoHabitaciones($hotel->habitaciones);
 
         return $hotel;
     }
 
     /**
-     * Obtiene todos los hoteles con sus relaciones definidas.
+     * Obtiene todos los hoteles con sus relaciones definidas y con el conteo de habitaciones
+     * por tipo y acomodación en cada hotel.
      *
-     * @return mixed Retorna la colección de hoteles.
+     * @return mixed Retorna la colección paginada de hoteles, cada uno con el atributo `infoHabitaciones`
+     *               que contiene el conteo.
      *
      * @throws Exception Si ocurre algún error durante la obtención.
      */
@@ -112,6 +125,12 @@ class HotelService extends Controller implements IHotelService
             );
         } catch (Exception $e) {
             throw new Exception($e->getMessage(), Response::HTTP_INTERNAL_SERVER_ERROR, $e);
+        }
+
+        if (isset($hoteles['data']) && count($hoteles['data']) > 0) {
+            foreach ($hoteles['data'] as $hotel) {
+                $hotel->infoHabitaciones = $this->calcularInfoHabitaciones($hotel->habitaciones);
+            }
         }
 
         return $hoteles;
