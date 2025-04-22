@@ -16,4 +16,9 @@ class HabitacionRepository extends BaseRepository implements IHabitacionReposito
     {
         return $this->model::where('hotelId', $hotelId)->delete();
     }
+
+    public function insertarVarias(array $habitaciones): void
+    {
+        $this->model::insert($habitaciones);
+    }
 }

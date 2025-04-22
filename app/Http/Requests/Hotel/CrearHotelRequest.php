@@ -41,7 +41,7 @@ class CrearHotelRequest extends FormRequest
                 'max:20',
                 Rule::unique('hoteles', 'nit')
             ],
-            'numeroHabitaciones' => ['required', 'integer', 'min:1'],
+            'numeroHabitaciones' => ['required', 'integer', 'min:1', 'max:300'],
 
             'habitaciones' => ['required', 'array', 'min:1'],
             'habitaciones.*.cantidad' => ['required', 'integer', 'min:1'],
